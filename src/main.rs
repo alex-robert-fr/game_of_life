@@ -1,5 +1,10 @@
+use std::time::Duration;
+
+use crossterm::event::{
+    poll, read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, MouseButton,
+    MouseEventKind,
+};
 use game_engine::{
-    input::Key,
     render::{Pencil, Window},
     spacial::Vector2D,
     Engine, Game, State,
@@ -29,15 +34,38 @@ fn main() {
     let mut engine = Engine::new(30);
     engine.run(
         |mut game: &mut Game, state: &mut State, window: &mut Window| {
-            for key in state.keyboard.get_last_key_press() {
-                match key {
-                    Key::Q => state.exit = true,
-                    Key::Unknown => break,
-                }
-            }
-
             let mut pencil = Pencil::new(window);
-            pencil.draw_text("Hello", Vector2D::new(10, 2));
+
+            match poll(Duration::from_millis(0)) {
+                Ok(val) => {
+                    if val {
+                        match read().unwrap() {
+                            Event::Key(KeyEvent {
+                                code: KeyCode::Char('q'),
+                                modifiers: KeyModifiers::NONE,
+                                kind: KeyEventKind::Press,
+                                state: KeyEventState::NONE,
+                            })
+                            | Event::Key(KeyEvent {
+                                code: KeyCode::Char('Q'),
+                                modifiers: KeyModifiers::SHIFT,
+                                kind: KeyEventKind::Press,
+                                state: KeyEventState::NONE,
+                            }) => {
+                                state.exit = true;
+                            }
+                            Event::Mouse(event) => {
+                                if event.kind == MouseEventKind::Down(MouseButton::Left) {
+                                    pencil.draw_item('#', Vector2D::new(event.column as i32, event.row as i32));
+                                }
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+                Err(_) => (),
+            }
+            pencil.draw_text("Hello", Vector2D::new(2, 2));
         },
     );
 }
