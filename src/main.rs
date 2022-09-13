@@ -1,6 +1,7 @@
 use std::{
     io::{stdout, Write},
-    time::Duration,
+    thread,
+    time::Duration, ops::Not,
 };
 
 use crossterm::{
@@ -16,10 +17,22 @@ use game_engine::{
     Engine, State,
 };
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 enum Life {
     Live,
     Death,
+}
+
+impl Not for Life {
+    type Output = Life;
+
+    fn not(self) -> Self {
+        if self == Life::Live {
+            Life::Death
+        } else {
+            Life::Live
+        }
+    }
 }
 
 struct GameOfLife {
@@ -45,16 +58,91 @@ impl GameOfLife {
     }
 
     pub fn update(&mut self) {
+
+        let mut death: Vec<Vector2D> = Vec::new();
+        let mut live: Vec<Vector2D> = Vec::new();
+
         let cells = &mut self.cells;
         for y in 0..cells.len() {
             for x in 0..cells[y].len() {
-                if cells[y][x] == Life::Live {
-                    if cells[y][x - 1] == Life::Live {
-                        cells[y][x] = Life::Death;
-                    }
+                let num_life_cells = GameOfLife::see(cells.clone(), y, x);
+                if num_life_cells == 3 || (cells[y][x] == Life::Live && num_life_cells == 2) {
+                    live.push(Vector2D {
+                        x: x as i32,
+                        y: y as i32,
+                    });
+                } else {
+                    death.push(Vector2D {
+                        x: x as i32,
+                        y: y as i32,
+                    });
                 }
             }
         }
+        for pos in live.iter() {
+            cells[pos.y as usize][pos.x as usize] = Life::Live;
+        }
+        for pos in death.iter() {
+            cells[pos.y as usize][pos.x as usize] = Life::Death;
+        }
+        thread::sleep(Duration::from_millis(1_000 / 30));
+    }
+
+    pub fn see(cells: Vec<Vec<Life>>, y: usize, x: usize) -> i32 {
+        let mut counter = 0;
+        let x_minus = if x == 0 {
+            size().unwrap().0 as usize - 1
+        } else {
+            x - 1
+        };
+        let x_plus = if x == size().unwrap().0 as usize - 1 {
+            0
+        } else {
+            x + 1
+        };
+        let y_minus = if y == 0 {
+            size().unwrap().1 as usize - 1
+        } else {
+            y - 1
+        };
+        let y_plus = if y == size().unwrap().1 as usize - 1 {
+            0
+        } else {
+            y + 1
+        };
+        // Left
+        if cells[y][x_minus] == Life::Live {
+            counter += 1;
+        }
+        // Left Up
+        if cells[y_minus][x_minus] == Life::Live {
+            counter += 1;
+        }
+        // Up
+        if cells[y_minus][x] == Life::Live {
+            counter += 1;
+        }
+        // Right Up
+        if cells[y_minus][x_plus] == Life::Live {
+            counter += 1;
+        }
+        // Right
+        if cells[y][x_plus] == Life::Live {
+            counter += 1;
+        }
+        // Right Down
+        if cells[y_plus][x_plus] == Life::Live {
+            counter += 1;
+        }
+        // Down
+        if cells[y_plus][x] == Life::Live {
+            counter += 1;
+        }
+        // Left Down
+        if cells[y_plus][x_minus] == Life::Live {
+            counter += 1;
+        }
+        counter
     }
 }
 
@@ -92,15 +180,7 @@ fn main() {
                         }
                         Event::Mouse(event) => {
                             if event.kind == MouseEventKind::Down(MouseButton::Left) {
-                                // game.cells.in(Cell {
-                                //     pos: Vector2D::new(event.column as i32, event.row as i32),
-                                //     life: Life::Live,
-                                // });
-                                // game.cells.insert(
-                                //     Vector2D::new(event.column as i32, event.row as i32),
-                                //     Life::Live,
-                                // );
-                                game.cells[event.row as usize][event.column as usize] = Life::Live;
+                                game.cells[event.row as usize][event.column as usize] = !game.cells[event.row as usize][event.column as usize];
                             }
                         }
                         _ => (),
