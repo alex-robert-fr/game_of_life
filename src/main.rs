@@ -1,8 +1,14 @@
-use std::{time::Duration, collections::HashMap};
+use std::{
+    io::{stdout, Write},
+    time::Duration,
+};
 
-use crossterm::event::{
-    poll, read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, MouseButton,
-    MouseEventKind,
+use crossterm::{
+    event::{
+        poll, read, Event, KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers,
+        MouseButton, MouseEventKind,
+    },
+    terminal::size,
 };
 use game_engine::{
     render::{Pencil, Window},
@@ -17,12 +23,34 @@ enum Life {
 }
 
 struct GameOfLife {
-    cells: HashMap<Vector2D, Life>,
+    cells: Vec<Vec<Life>>,
 }
 
 impl GameOfLife {
     pub fn new() -> Self {
-        GameOfLife { cells: HashMap::new() }
+        let size = size().unwrap();
+        let mut cells = Vec::new();
+        for _ in 0..size.1 {
+            let mut x_line = Vec::new();
+            for _ in 0..size.0 {
+                x_line.push(Life::Death);
+            }
+            cells.push(x_line);
+        }
+        GameOfLife { cells }
+    }
+
+    pub fn update(&mut self) {
+        let cells = &mut self.cells;
+        for y in 0..cells.len() {
+            for x in 0..cells[y].len() {
+                if cells[y][x] == Life::Live {
+                    if cells[y][x - 1] == Life::Live {
+                        cells[y][x] = Life::Death;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -56,7 +84,11 @@ fn main() {
                                 //     pos: Vector2D::new(event.column as i32, event.row as i32),
                                 //     life: Life::Live,
                                 // });
-                                game.cells.insert(Vector2D::new(event.column as i32, event.row as i32), Life::Live);
+                                // game.cells.insert(
+                                //     Vector2D::new(event.column as i32, event.row as i32),
+                                //     Life::Live,
+                                // );
+                                game.cells[event.row as usize][event.column as usize] = Life::Live;
                             }
                         }
                         _ => (),
@@ -65,10 +97,29 @@ fn main() {
             }
             Err(_) => (),
         }
+
+        game.update();
+
         // pencil.draw_text("Hello", Vector2D::new(2, 2));
-        for (cell, state_cell) in &game.cells {
-            if state_cell == &Life::Live {
-                pencil.draw_item('#', *cell);
+        for (y, cell) in game.cells.iter().enumerate() {
+            for (x, life) in cell.iter().enumerate() {
+                if life == &Life::Live {
+                    pencil.draw_item(
+                        '#',
+                        Vector2D {
+                            x: x as i32,
+                            y: y as i32,
+                        },
+                    );
+                } else {
+                    pencil.draw_item(
+                        ' ',
+                        Vector2D {
+                            x: x as i32,
+                            y: y as i32,
+                        },
+                    )
+                }
             }
         }
     });
