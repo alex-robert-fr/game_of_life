@@ -24,6 +24,7 @@ enum Life {
 
 struct GameOfLife {
     cells: Vec<Vec<Life>>,
+    is_run: bool,
 }
 
 impl GameOfLife {
@@ -37,7 +38,10 @@ impl GameOfLife {
             }
             cells.push(x_line);
         }
-        GameOfLife { cells }
+        GameOfLife {
+            cells,
+            is_run: false,
+        }
     }
 
     pub fn update(&mut self) {
@@ -78,6 +82,14 @@ fn main() {
                         }) => {
                             state.exit = true;
                         }
+                        Event::Key(KeyEvent {
+                            code: KeyCode::Char(' '),
+                            modifiers: KeyModifiers::NONE,
+                            kind: KeyEventKind::Press,
+                            state: KeyEventState::NONE,
+                        }) => {
+                            game.is_run = !game.is_run;
+                        }
                         Event::Mouse(event) => {
                             if event.kind == MouseEventKind::Down(MouseButton::Left) {
                                 // game.cells.in(Cell {
@@ -98,9 +110,6 @@ fn main() {
             Err(_) => (),
         }
 
-        game.update();
-
-        // pencil.draw_text("Hello", Vector2D::new(2, 2));
         for (y, cell) in game.cells.iter().enumerate() {
             for (x, life) in cell.iter().enumerate() {
                 if life == &Life::Live {
@@ -121,6 +130,13 @@ fn main() {
                     )
                 }
             }
+        }
+
+        if game.is_run {
+            pencil.draw_text("RUN", Vector2D { x: 0, y: 0 });
+            game.update();
+        } else {
+            pencil.draw_text("PAUSE", Vector2D { x: 0, y: 0 });
         }
     });
 }
