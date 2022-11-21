@@ -85,7 +85,7 @@ impl GameOfLife {
         for pos in death.iter() {
             cells[pos.y as usize][pos.x as usize] = Life::Death;
         }
-        thread::sleep(Duration::from_millis(1_000 / 30));
+        // thread::sleep(Duration::from_millis(1_000 / 30));
     }
 
     pub fn see(cells: Vec<Vec<Life>>, y: usize, x: usize) -> i32 {
